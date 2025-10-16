@@ -23,7 +23,7 @@ class WebSocketClients:
 
 
     async def disconnectClient(self, websocketClient: WebSocketClient, code: int = None, calledBy:str=None):
-        debug.echo(f"[disconnect] {calledBy}: {websocketClient.id}")
+        debug.echo(f"disconnectClient {websocketClient} calledBy {calledBy}")
 
         await websocketClient.disconnect(code)
         async with self._lock:

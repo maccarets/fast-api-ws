@@ -1,6 +1,3 @@
-
-
-
 import asyncio
 import logging
 import os
@@ -12,7 +9,6 @@ from fastapi import FastAPI
 
 from app.config import config
 from app.services.clients import WebSocketClients
-
 
 
 log = logging.getLogger(config.APP_NAME)
@@ -80,10 +76,8 @@ class ShutdownCoordinator:
 def _install_signal_handlers(app: FastAPI):
     """Ensure we kick off the graceful waiter on SIGINT/SIGTERM."""
 
-    shutdown_coordinator = app.state.shutdown_coordinator
-
-
-    loop = asyncio.get_running_loop()
+    shutdown_coordinator    = app.state.shutdown_coordinator
+    loop                    = asyncio.get_running_loop()
 
     def _trigger(sig_name: str):
         if not shutdown_coordinator.started:

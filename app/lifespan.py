@@ -11,7 +11,6 @@ log = logging.getLogger(config.APP_NAME)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
     # Create the per-worker singleton
     app.state.wsClients            = WebSocketClients()
     app.state.shutdown_coordinator = ShutdownCoordinator()

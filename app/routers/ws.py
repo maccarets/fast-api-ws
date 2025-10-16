@@ -6,7 +6,7 @@ from ..services.client import WebSocketClient
 router = APIRouter()
 
 async def send_ws_error_and_close(ws: WebSocket, code: int, message: str):
-    # Accept before sending any data (safe with Starlette/FastAPI)
+    """Send error message and close WebSocket connection."""
     await ws.accept()
     await ws.send_json({"type": "error", "code": code, "message": message})
     await ws.close(code=code)
@@ -17,21 +17,29 @@ async def websocket_endpoint(
         clientId    : int               = Path(...),
         wsClients   : WebSocketClients  = Depends(getWsClients_ws),
 ):
-    # 1) Duplicate check BEFORE registering
+    # Check for duplicate connections before registering
     if await wsClients.is_connected(clientId):
         await send_ws_error_and_close(
             websocket,
-            status.WS_1008_POLICY_VIOLATION,      # 1008 = policy violation
+            status.WS_1008_POLICY_VIOLATION,  # 1008 = policy violation
             f"Client {clientId} is already connected"
         )
         return
 
-    wsClient = WebSocketClient(clientId, websocket)
+    # Check for duplicate connections before registering
+    if websocket.app.state.shutdown_coordinator.started:
+        await send_ws_error_and_close(
+            websocket,
+            status.WS_1008_POLICY_VIOLATION,  # 1008 = policy violation
+            f"Server in shutdown mode"
+        )
+        return
 
-    # 2) Register & accept
+    wsClient = WebSocketClient(clientId, websocket)
     await wsClients.connectClient(wsClient)
 
     try:
         await wsClient.receive()
     finally:
-        await wsClients.disconnectClient(wsClient)
+        await wsClients.disconnectClient(wsClient, calledBy="websocket_endpoint")
+

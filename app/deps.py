@@ -3,11 +3,11 @@ from starlette.websockets import WebSocket
 
 from .services.clients import WebSocketClients
 
-# For HTTP routes
 def getWsClients_http(request: Request) -> WebSocketClients:
-    return request.app.state.wsClients  # created in lifespan
+    """Get WebSocket clients manager for HTTP routes."""
+    return request.app.state.wsClients
 
 
-# For WebSocket routes
 def getWsClients_ws(websocket: WebSocket) -> WebSocketClients:
+    """Get WebSocket clients manager for WebSocket routes."""
     return websocket.app.state.wsClients

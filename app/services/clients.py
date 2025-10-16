@@ -4,7 +4,7 @@ from typing import List, Dict
 from app.services.client import WebSocketClient
 from utils.debug import Debug
 
-debug = Debug("WebSocketClients", True)
+debug = Debug("WebSocketClients", False)
 
 class WebSocketClients:
 
@@ -17,23 +17,22 @@ class WebSocketClients:
 
 
     async def connectClient(self, websocketClient: WebSocketClient):
-
-        # if websocketClient._websocket.app.state.shutdown_coordinator.is_started:
-        #     print
-
         await websocketClient.connect()
         async with self._lock:
             self._clients[websocketClient.id] = websocketClient
 
 
-    async def disconnectClient(self, websocketClient: WebSocketClient, code: int=None):
+    async def disconnectClient(self, websocketClient: WebSocketClient, code: int = None, calledBy:str=None):
+        debug.echo(f"[disconnect] {calledBy}: {websocketClient.id}")
+
         await websocketClient.disconnect(code)
         async with self._lock:
-            del self._clients[websocketClient.id]
+            if websocketClient.id in self._clients:
+                del self._clients[websocketClient.id]
 
     async def disconnectAll(self):
         for client in self._clients.values():
-            await self.disconnectClient(client)
+            await self.disconnectClient(client, calledBy="disconnectAll")
 
 
     async def broadcastToAll(self, message: str) -> int:
@@ -43,7 +42,7 @@ class WebSocketClients:
                 await client.send_text(message)
                 sent += 1
             except Exception:
-                # drop broken connections
+                # Drop broken connections
                 self._clients.pop(clientId, None)
         return sent
 
@@ -64,7 +63,4 @@ class WebSocketClients:
     async def is_connected(self, clientId):
         async with self._lock:
             return clientId in self._clients
-
-
-
 

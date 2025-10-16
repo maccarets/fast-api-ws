@@ -1,8 +1,9 @@
 from fastapi import WebSocket, WebSocketDisconnect
+from starlette.websockets import WebSocketState
 
 from utils.debug import Debug
 
-debug = Debug("WsClient", True)
+debug = Debug("WsClient", False)
 
 class WebSocketClient:
     def __init__(self, id: int, websocket:WebSocket):
@@ -10,14 +11,21 @@ class WebSocketClient:
         self.id         : int       = id
 
     def __repr__(self):
-        return f"<WebSocketClient: {self.id}>"
+        return f"<WebSocketClient: {self.id} isConnected: {self.isConnected}>"
+
+    @property
+    def isConnected(self) -> bool:
+        return self._websocket.client_state == WebSocketState.CONNECTED
 
     async def connect(self):
         debug.echo(f"connect()")
         await self._websocket.accept()
 
-    async def disconnect(self, code:int=None):
+    async def disconnect(self, code: int = None):
         debug.echo(f"disconnect()")
+        if self._websocket.client_state == WebSocketState.DISCONNECTED:
+            debug.echo(f"already disconnected")
+            return
         await self._websocket.close(code=code)
 
     async def send_text(self, message: str):
@@ -35,5 +43,5 @@ class WebSocketClient:
                 await self._websocket.send_text(f"Server echo: {message}")
 
         except WebSocketDisconnect:
-            print("Client disconnected")
+            pass
 

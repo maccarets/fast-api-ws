@@ -1,0 +1,70 @@
+import asyncio
+from typing import List, Dict
+
+from app.services.client import WebSocketClient
+from utils.debug import Debug
+
+debug = Debug("WebSocketClients", True)
+
+class WebSocketClients:
+
+    def __init__(self):
+        self._clients   : Dict[int, WebSocketClient]    = {}
+        self._lock      : asyncio.Lock                  = asyncio.Lock()
+
+    def __repr__(self):
+        return f"WebSocketClients({self._clients})"
+
+
+    async def connectClient(self, websocketClient: WebSocketClient):
+
+        # if websocketClient._websocket.app.state.shutdown_coordinator.is_started:
+        #     print
+
+        await websocketClient.connect()
+        async with self._lock:
+            self._clients[websocketClient.id] = websocketClient
+
+
+    async def disconnectClient(self, websocketClient: WebSocketClient, code: int=None):
+        await websocketClient.disconnect(code)
+        async with self._lock:
+            del self._clients[websocketClient.id]
+
+    async def disconnectAll(self):
+        for client in self._clients.values():
+            await self.disconnectClient(client)
+
+
+    async def broadcastToAll(self, message: str) -> int:
+        sent = 0
+        for clientId, client in list(self._clients.items()):
+            try:
+                await client.send_text(message)
+                sent += 1
+            except Exception:
+                # drop broken connections
+                self._clients.pop(clientId, None)
+        return sent
+
+    async def count(self) -> int:
+        async with self._lock:
+            return len(self._clients)
+
+    async def listIds(self) -> List[int]:
+        async with self._lock:
+            return list(self._clients.keys())
+
+
+    async def snapshot(self) -> List[WebSocketClient]:
+        """Get a stable list of clients to iterate without holding the lock."""
+        async with self._lock:
+            return list(self._clients.values())
+
+    async def is_connected(self, clientId):
+        async with self._lock:
+            return clientId in self._clients
+
+
+
+
